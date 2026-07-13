@@ -1,6 +1,6 @@
 # Ranchi Hacks Gallery
 
-**300 photos** from Google Photos album, rendered as a static gallery page.
+**92 photos · 208 videos** from Google Photos album, rendered as a static gallery page.
 
 ## How to deploy (GitHub Pages — free)
 
@@ -26,12 +26,10 @@ npm run scrape
 
 This regenerates `index.html` with fresh URLs. Commit and push to update.
 
-### `scrape.mjs`
+## Video delay
 
-Fetches the album, extracts all photo/video URLs from Google's CDN, and generates a responsive grid gallery. Zero dependencies.
+Videos take ~10s to start playing. Google Photos CDN doesn't support HTTP Range, and the mp4 metadata sits at the end of the file — the browser must download the full video before it can play. For a 6s, 26MB video that takes ~10s.
 
-- Photo thumbnails: 600px (`=w600-h600`)
-- Photo full-res links: 2048px (`=w2048`)
-- Videos: proxied through Cloudflare Worker for CORS
-- Videos take ~10s to start playing — Google Photos CDN lacks HTTP Range support and mp4 metadata sits at end of file, so browser downloads full video before playback
-- Dark theme, lazy loading, responsive grid
+---
+
+All 300 items: 92 photos (direct from Google CDN) + 208 videos (proxied through Cloudflare Worker for CORS headers).
