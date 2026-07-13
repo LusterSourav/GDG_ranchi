@@ -1,5 +1,5 @@
 const ALBUM_URL = 'https://photos.google.com/share/AF1QipMmV2mCJIxgLJRTgQmzZiwhJYK8WbaxM7JFM3jYHrcARrlK-bzOXxfjD5I2ORvQ1A?key=TkRHbnlpT3U3bTduZzNJeEZWaEo0X2hfU3IzMlZ3';
-const CONCURRENCY = 10;
+const CONCURRENCY = 15;
 
 function baseUrl(url) {
   return url.replace(/=[^=]*$/, '');
@@ -12,7 +12,7 @@ async function fetchAlbumHtml() {
   return await res.text();
 }
 
-function extractImageUrls(html) {
+function extractBaseUrls(html) {
   const seen = new Set();
   const urls = [];
   const re = /https:\/\/lh3\.googleusercontent\.com\/pw\/[A-Za-z0-9_\-]+/g;
@@ -27,26 +27,16 @@ function extractImageUrls(html) {
   return urls;
 }
 
-async function classifyUrl(url) {
+async function classifyUrl(base) {
   try {
-    const res = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+    const res = await fetch(base + '=dv', { method: 'HEAD', redirect: 'follow' });
     const ct = res.headers.get('content-type') || '';
-    if (res.status >= 300 && res.status < 400) {
-      // ponytail: redirected = video (Google returns video source via redirect)
-      return { url, type: 'video', contentType: ct };
+    if (ct.startsWith('video/')) {
+      return { base, type: 'video', contentType: ct };
     }
-    if (ct.startsWith('image/')) {
-      return { url, type: 'photo', contentType: ct };
-    }
-    // fallback: try a GET with range to check
-    const res2 = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
-    const ct2 = res2.headers.get('content-type') || '';
-    if (ct2.startsWith('image/')) {
-      return { url, type: 'photo', contentType: ct2 };
-    }
-    return { url, type: 'photo', contentType: ct2 };
+    return { base, type: 'photo', contentType: ct };
   } catch {
-    return { url, type: 'photo', contentType: '' };
+    return { base, type: 'photo', contentType: '' };
   }
 }
 
@@ -66,12 +56,12 @@ function generateHtml(items) {
   const photos = items.filter(i => i.type === 'photo');
   const videos = items.filter(i => i.type === 'video');
 
-  const photoCards = photos.map((p, i) =>
-    `<a href="${p.url}=w2048" target="_blank" class="card photo"><img src="${p.url}=w600-h600" alt="" loading="lazy"></a>`
+  const photoCards = photos.map(p =>
+    `<a href="${p.base}=w2048" target="_blank" class="card photo"><img src="${p.base}=w600" alt="" loading="lazy"></a>`
   ).join('\n    ');
 
-  const videoCards = videos.map((v, i) =>
-    `<div class="card video"><video src="${v.url}=dv" controls preload="none" poster="${v.url}=w600-h600-no"></video></div>`
+  const videoCards = videos.map(v =>
+    `<div class="card video"><video src="${v.base}=dv" controls preload="none" poster="${v.base}=w600-no"></video></div>`
   ).join('\n    ');
 
   return `<!DOCTYPE html>
@@ -89,7 +79,8 @@ h1{font-size:1.5rem;font-weight:600;margin-bottom:.25rem}
 .count{color:#888;font-size:.875rem}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;padding:0 8px 8px;max-width:1600px;margin:0 auto}
 .card{overflow:hidden;border-radius:4px;background:#1a1a1a;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
-.card img,.card video{width:100%;height:100%;object-fit:cover;display:block}
+.card img,.card video{width:100%;height:100%;display:block}
+.card img{object-fit:cover}
 .card video{object-fit:contain;background:#000}
 .photo{transition:transform .15s}
 .photo:hover{transform:scale(1.02)}
@@ -99,11 +90,11 @@ h1{font-size:1.5rem;font-weight:600;margin-bottom:.25rem}
 <body>
 <header>
 <h1>Ranchi Hacks Coverage 1</h1>
-<p class="count">${photos.length} photos${videos.length ? ` · ${videos.length} videos` : ''}</p>
+<p class="count">${photos.length} photos${videos.length ? ` &middot; ${videos.length} videos` : ''}</p>
 </header>
 <div class="gallery">
     ${photoCards}
-    ${videoCards ? '\n    ' + videoCards : ''}
+    ${videoCards}
 </div>
 </body>
 </html>`;
@@ -113,20 +104,20 @@ async function main() {
   console.log('Fetching album page...');
   const html = await fetchAlbumHtml();
 
-  console.log('Extracting image URLs...');
-  const urls = extractImageUrls(html);
-  console.log(`Found ${urls.length} unique media items`);
+  console.log('Extracting base URLs...');
+  const urls = extractBaseUrls(html);
+  console.log(`Found ${urls.length} items`);
 
-  console.log('Classifying (photo vs video)...');
+  console.log('Classifying (HEAD /?=dv)...');
   const items = await classifyAll(urls);
 
   const photos = items.filter(i => i.type === 'photo').length;
   const videos = items.filter(i => i.type === 'video').length;
   console.log(`\nDone: ${photos} photos, ${videos} videos`);
 
-  const html_out = generateHtml(items);
+  const htmlOut = generateHtml(items);
   const fs = await import('fs');
-  fs.writeFileSync('index.html', html_out);
+  fs.writeFileSync('index.html', htmlOut);
   console.log('Wrote index.html');
 }
 
