@@ -1,35 +1,29 @@
 # Ranchi Hacks Gallery
 
-**92 photos · 208 videos** from Google Photos album, rendered as a static gallery page.
+92 photos, 208 videos from a Google Photos album. Rendered as a static page.
 
-## How to deploy (GitHub Pages — free)
+## Deploy
+
+Push to GitHub, enable Pages. Or upload `index.html` to Cloudflare Pages, Netlify, Vercel.
 
 ```bash
-# 1. Create a GitHub repo and push
-git init
-git add .
-git commit -m "ranchi gallery"
+git init && git add . && git commit -m "ranchi gallery"
 git remote add origin https://github.com/YOUR_USERNAME/ranchi-gallery.git
 git push -u origin main
-
-# 2. Go to repo Settings → Pages → deploy from main branch, /root
-# 3. Your gallery is live at: https://YOUR_USERNAME.github.io/ranchi-gallery/
 ```
 
-Or deploy to **Cloudflare Pages**, **Netlify**, **Vercel** — upload the `index.html` file, it's a static site.
-
-## How to re-scrape (if album changes)
+## Re-scrape
 
 ```bash
 npm run scrape
 ```
 
-This regenerates `index.html` with fresh URLs. Commit and push to update.
+Regenerates `index.html` with fresh URLs. Commit and push.
 
-## Video delay
+## Videos
 
-Videos take ~10s to start playing. Google Photos CDN doesn't support HTTP Range, and the mp4 metadata sits at the end of the file — the browser must download the full video before it can play. For a 6s, 26MB video that takes ~10s.
+Videos take about 10 seconds to start playing. Google's CDN doesn't support byte-range requests, and the mp4 metadata is at the end of the file. The browser has to download the whole thing before it can play. A 6-second, 26MB video takes about 10 seconds to load.
 
----
+## How it works
 
-All 300 items: 92 photos (direct from Google CDN) + 208 videos (proxied through Cloudflare Worker for CORS headers).
+92 photos load directly from Google's CDN. 208 videos go through a Cloudflare Worker that adds CORS headers. The `scrape.mjs` script fetches the album, classifies each item, and generates the gallery. Zero dependencies.
