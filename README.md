@@ -32,5 +32,6 @@ Fetches the album, extracts all photo/video URLs from Google's CDN, and generate
 
 - Photo thumbnails: 600px (`=w600-h600`)
 - Photo full-res links: 2048px (`=w2048`)
-- Videos (if any): embedded with `<video>` using `=dv` param
+- Videos: proxied through Cloudflare Worker for CORS
+- Videos take ~10s to start playing — Google Photos CDN lacks HTTP Range support and mp4 metadata sits at end of file, so browser downloads full video before playback
 - Dark theme, lazy loading, responsive grid

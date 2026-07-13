@@ -20,7 +20,7 @@ async function handleRequest(request) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Expose-Headers': 'Content-Type, Content-Length, Content-Range, Accept-Ranges',
+        'Access-Control-Expose-Headers': 'Content-Type, Content-Length',
       },
       status: 204,
     });
@@ -37,21 +37,34 @@ async function handleRequest(request) {
     if (!location) {
       return new Response('Redirect with no Location', { status: 502 });
     }
-    const videoRes = await fetch(location, {
+    const fetchOpts = {
       method: request.method,
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Range': request.headers.get('Range') || '' },
-    });
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    };
+    const range = request.headers.get('Range');
+    if (range) fetchOpts.headers['Range'] = range;
+
+    const videoRes = await fetch(location, fetchOpts);
+
     const responseHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Expose-Headers': 'Content-Type, Content-Length, Content-Range, Accept-Ranges',
+      'Access-Control-Expose-Headers': 'Content-Type, Content-Length',
       'Content-Type': videoRes.headers.get('Content-Type') || 'video/mp4',
-      'Accept-Ranges': 'bytes',
     };
-    const contentRange = videoRes.headers.get('Content-Range');
-    if (contentRange) responseHeaders['Content-Range'] = contentRange;
+
     const contentLength = videoRes.headers.get('Content-Length');
     if (contentLength) responseHeaders['Content-Length'] = contentLength;
-    return new Response(videoRes.body, { status: videoRes.status, headers: responseHeaders });
+
+    let status = videoRes.status;
+    if (range && status === 206) {
+      const contentRange = videoRes.headers.get('Content-Range');
+      if (contentRange) responseHeaders['Content-Range'] = contentRange;
+      responseHeaders['Accept-Ranges'] = 'bytes';
+    } else if (range && status === 200) {
+      // ponytail: Google CDN ignores Range, serve full 200, browser plays from start
+    }
+
+    return new Response(videoRes.body, { status, headers: responseHeaders });
   }
 
   return new Response('Unexpected response from upstream', { status: 502 });
