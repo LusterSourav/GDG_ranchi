@@ -1,5 +1,6 @@
 const ALBUM_URL = 'https://photos.google.com/share/AF1QipMmV2mCJIxgLJRTgQmzZiwhJYK8WbaxM7JFM3jYHrcARrlK-bzOXxfjD5I2ORvQ1A?key=TkRHbnlpT3U3bTduZzNJeEZWaEo0X2hfU3IzMlZ3';
 const CONCURRENCY = 15;
+const WORKER_HOST = 'gdg-video-proxy.sourav-xcd.workers.dev';
 
 function baseUrl(url) {
   return url.replace(/=[^=]*$/, '');
@@ -61,7 +62,7 @@ function generateHtml(items) {
   ).join('\n    ');
 
   const videoCards = videos.map(v =>
-    `<div class="card video"><video src="${v.base}=dv" controls preload="none" poster="${v.base}=w600-no"></video></div>`
+    `<div class="card video"><video src="https://${WORKER_HOST}/?url=${Buffer.from(v.base).toString('base64')}" controls preload="none" poster="${v.base}=w600-no"></video></div>`
   ).join('\n    ');
 
   return `<!DOCTYPE html>
